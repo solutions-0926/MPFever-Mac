@@ -49,3 +49,18 @@ jobs:
           name: MPFever-${{ github.sha }}
           path: release/*.zip
           retention-days: 14
+
+  # the macOS start and the .dmg's assembly (mac/), run on a real Mac (bash 3.2, BSD tools) and on Linux
+  mac-scripts:
+    strategy:
+      matrix:
+        os: [macos-14, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Mac scripts
+        run: python tests/test_macwine.py

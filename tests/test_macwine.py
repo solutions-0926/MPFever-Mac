@@ -119,6 +119,11 @@ def test_dmg(t):
 
 
 def main():
+    if os.name == "nt":
+        # (the Windows build runs this too: its "bash" is the WSL launcher, and the scripts are for a Mac. They are tested by the
+        # Linux and macOS jobs of the CI)
+        print("macOS scripts: not run on Windows (the CI's Linux and macOS jobs run them)")
+        return 0
     if shutil.which("bash") is None:
         print("test skipped: no bash")
         return 0
