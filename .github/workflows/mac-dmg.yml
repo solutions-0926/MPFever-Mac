@@ -1,13 +1,19 @@
-# Builds MPFever-<version>-mac.dmg (MPFever.app with its own Wine inside) on GitHub's macOS runner, from the Windows archive of a
-# release (MPFever-<version>.zip), and attaches it to the run. Started by hand. It publishes nothing.
+# Builds MPFever-<version>-mac.dmg (MPFever.app with its own Wine inside) on GitHub's macOS runner, from the Windows archive
+# MPFever-<version>.zip: the one in input/ when there is one, else the one of the release named by the tag. It runs on a push to
+# this branch's input/ folder and by hand. It publishes nothing: the .dmg is attached to the run.
 name: Mac dmg
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "release tag whose MPFever-<version>.zip is used (for example v0.7.5)"
-        required: true
+        description: "release tag whose MPFever-<version>.zip is used when input/ has none (for example v0.7.5)"
+        required: false
+  push:
+    paths:
+      - "input/*.zip"
+      - "mac/**"
+      - ".github/workflows/mac-dmg.yml"
 
 jobs:
   dmg:
@@ -15,12 +21,16 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: The Windows archive of the release
+      - name: The Windows archive
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p in
-          gh release download "${{ inputs.tag }}" --repo "${{ github.repository }}" --pattern 'MPFever-*.zip' --dir in
+          if ls input/MPFever-*.zip >/dev/null 2>&1; then
+            cp input/MPFever-*.zip in/
+          else
+            gh release download "${{ inputs.tag }}" --repo "${{ github.repository }}" --pattern 'MPFever-*.zip' --dir in
+          fi
           rm -f in/*-server.zip in/*ServerList*.zip
           ls in
       - name: Build the dmg
