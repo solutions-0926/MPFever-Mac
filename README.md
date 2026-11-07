@@ -47,7 +47,7 @@ Each player plays in their own copy of the game. MPFever replays every player's 
 ## Install and play
 
 1. Download **`MPFever-<version>.zip`** from the [releases](https://github.com/dkdknight/MPFever/releases/latest).
-2. **Extract the whole folder** anywhere, for example on your desktop.
+2. **Extract the whole folder** anywhere (on a Mac: see [INSTALL-MAC](docs/INSTALL-MAC.txt) first), for example on your desktop.
    Always start `MPFever.exe` **from that folder**. Don't move the `.exe` out of it, use a shortcut instead: MPFever needs the files next to it to update itself and to stay in sync.
 3. Start **`MPFever.exe`**. It finds the game (or asks you for its `TransportFever3.exe`), installs the mod and starts Transport Fever 3.
 4. In the main menu, click the **Multiplayer** card (top left).
@@ -149,7 +149,7 @@ The mods tested so far are listed in [MODS](docs/MODS.md).
 ## Known limitations
 
 - **One company per player:** a merger into the savegame's company leaves the merged company's loans behind (they are the game's own loans).
-- **Steam and Windows only.** Linux and Steam Deck players report that it runs through Proton (see INSTALL.txt; untested by us).
+- **Steam and Windows only.** On a **Mac** it runs through Wine (CrossOver or Whisky) with the Windows build of the game: see [INSTALL-MAC](docs/INSTALL-MAC.txt) (new, not yet tested on a real Mac). Linux and Steam Deck players report that it runs through Proton (see INSTALL.txt; untested by us). The Mac's own build of the game is not supported: it is a different program that MPFever cannot patch.
 - **One company per player: the game's achievements** are counted for the savegame's company only (the game's own scripts see that company alone).
 - **Small drifts of vehicles and passengers** can happen. They are repaired by a reload if they last.
 - **Two players changing the same place within about two seconds**: the build made second is left out on every game when it no longer fits the place, and has to be made again (with one company per player, the chat tells its player).

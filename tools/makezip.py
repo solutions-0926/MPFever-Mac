@@ -30,7 +30,13 @@ def pack(folder, out):
             if path is None:
                 z.writestr(zipfile.ZipInfo(name), b"")
             else:
-                z.write(path, name)
+                info = zipfile.ZipInfo.from_file(path, name)
+                info.compress_type = zipfile.ZIP_DEFLATED
+                # (a build on Windows has no executable bit: the macOS scripts must keep theirs, or they will not start)
+                if name.endswith((".sh", ".command")):
+                    info.external_attr = (0o100755 << 16)
+                with open(path, "rb") as fh:
+                    z.writestr(info, fh.read(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
     check(out)
     return len(entries)
 

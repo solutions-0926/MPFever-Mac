@@ -43,6 +43,9 @@ if exist native\mpfever_sigs.txt copy /y native\mpfever_sigs.txt "%DIST%\" >nul
 for %%f in (README INSTALL ROADMAP CHANGELOG PRIVACY) do copy /y docs\%%f.txt "%DIST%\" >nul || exit /b 1
 copy /y LICENSE "%DIST%\LICENSE.txt" >nul || exit /b 1
 copy /y NOTICE.txt "%DIST%\" >nul || exit /b 1
+rem the macOS start (Wine): its script and its guide
+xcopy /e /i /q /y mac "%DIST%\mac" >nul || exit /b 1
+copy /y docs\INSTALL-MAC.txt "%DIST%\" >nul || exit /b 1
 xcopy /e /i /q /y mod\mpfever_1 "%DIST%\mod\mpfever_1" >nul || exit /b 1
 if exist "release\MPFever-%VERSION%.zip" del "release\MPFever-%VERSION%.zip"
 rem standard zip entries (forward slashes in the central directory and in every local header: ZipFile.CreateFromDirectory of

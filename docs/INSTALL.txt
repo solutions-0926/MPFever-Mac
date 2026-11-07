@@ -8,6 +8,7 @@ REQUIREMENTS (every player)
   and the same mods. MPFever is not made for other mods yet: mods that change the game by
   themselves (rename lines, assign terminals...) break the synchronisation.
 - Steam running.
+- Mac: see INSTALL-MAC.txt (Wine through CrossOver or Whisky, with a script).
 - Linux: there is no Linux version of MPFever, and we cannot test on Linux. A player
   reports that it runs with Proton, with these Steam launch options for Transport Fever 3:
        WINEDLLOVERRIDES="winhttp=n,b" bash -c 'exec "${@/TransportFever3.exe/MPFever.exe}"' -- %command%

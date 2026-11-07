@@ -17,7 +17,7 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-TEXT = {".lua", ".cs", ".cpp", ".h", ".py", ".bat", ".json", ".txt", ".md", ".def", ".asm", ".csproj", ".gitignore"}
+TEXT = {".lua", ".cs", ".cpp", ".h", ".py", ".bat", ".json", ".txt", ".md", ".def", ".asm", ".csproj", ".gitignore", ".sh"}
 failed = False
 
 

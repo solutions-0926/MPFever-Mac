@@ -1,0 +1,88 @@
+MPFever on a Mac (through Wine)
+========================================================
+
+MPFever works with the WINDOWS build of Transport Fever 3: it patches TransportFever3.exe. On a Mac you run that Windows game,
+and the Windows MPFever.exe next to it, in one Wine "bottle". This is the same thing the Linux / Proton players do (see
+INSTALL.txt), made easy by a script.
+
+Why not the Mac version of the game? It is a different program (a Mach-O file for Apple Silicon): MPFever cannot patch it, and
+it may calculate with slightly different numbers than the Windows build, so a Mac-version player and a Windows player could not
+stay in the same world. With the Windows build in Wine, you play with everybody else, Windows players included.
+Everyone in a game still needs the same game build (40425, 40423 or 40420), the same DLCs and the same mods.
+
+Status: this setup is NEW and has been tested only with the script's own checks (tests/test_macwine.py), not yet on a real
+Mac with the game. Please report how it went (Discord, or a GitHub issue with ~/Library/Logs/MPFever-mac.log and MPFever's logs).
+
+
+WHAT YOU NEED
+-------------
+- A Mac with Apple Silicon (M1 or later) and macOS 14 or later (macOS 15 or later is better: Rosetta 2 then offers the AVX
+  instructions the game may need). On an Intel Mac, the same steps work without Rosetta.
+- Rosetta 2 (Apple Silicon):   softwareupdate --install-rosetta --agree-to-license
+- A Wine for Windows games, ONE of:
+    * CrossOver (https://www.codeweavers.com/crossover), paid, tried 14 days free, the most reliable;
+    * Whisky (free, https://getwhisky.app; no longer developed, but it still works);
+    * a plain Wine (Homebrew: brew install --cask --no-quarantine gcenx/wine/wine-crossover), more work.
+  These use Apple's graphics translation (D3DMetal / DXMT / DXVK). How well the game runs depends on them and on your Mac:
+  the game asks a lot of memory (16 GB or more is wise).
+- Transport Fever 3 for WINDOWS, installed through the Windows Steam inside the bottle (not the Mac Steam):
+    1. In CrossOver / Whisky make a bottle (Windows 10, 64 bit).
+    2. Install Steam in it (CrossOver: Install an app > Steam; Whisky: Run... and the Steam installer).
+    3. Start Steam in the bottle, sign in, install Transport Fever 3 there, and start it once from there to see that it runs.
+  If you own the game on the Mac Steam only, you buy nothing again: the same account installs the Windows build in the
+  Windows Steam of the bottle.
+
+
+INSTALL
+-------
+1. Download MPFever-<version>.zip from the releases (the Windows archive: the Mac needs it) and extract it, for example
+   into your Downloads folder. You get a folder MPFever with a folder mac in it.
+2. Open Terminal and run (the Terminal accepts the folder dragged into it):
+
+       cd ~/Downloads/MPFever/mac
+       bash mpfever-mac.sh doctor     # what it found: the bottle, the game, the wine program
+       bash mpfever-mac.sh install    # copies MPFever into the game's folder (the bottle's), remembers the bottle
+
+   If the script finds the wrong bottle or none, say which one:
+
+       MPF_PREFIX="$HOME/Library/Containers/com.isaacmarovitz.Whisky/Bottles/<name>" bash mpfever-mac.sh install
+
+   (CrossOver's bottles are in ~/Library/Application Support/CrossOver/Bottles.) MPF_GAMEDIR sets the game's folder,
+   MPF_WINE the wine program.
+3. Optional, a double-click start: bash mpfever-mac.sh app   makes ~/Applications/MPFever.app. (Not signed by Apple: made on
+   your Mac, it starts without a warning.)
+
+
+PLAY
+----
+    bash mpfever-mac.sh play        (or open MPFever.app)
+
+It starts Steam in the bottle when it is not running, then MPFever.exe, which finds the game, installs the mod and starts
+Transport Fever 3. From there it is the game as described in README.txt: Multiplayer card, Host, or join.
+Always start the game through MPFever when you want to play together.
+
+MPFever updates itself in the game's folder (<game>/MPFever). A newer archive next to the script replaces the installed files
+the next time you run install or play.
+
+Network: the host's port (28090, TCP) is opened on the router by MPFever as on Windows. The Mac's firewall may ask whether
+Wine may accept connections: allow it.
+
+
+WHAT THE SCRIPT SETS
+--------------------
+- WINEDLLOVERRIDES="winhttp=n,b": Wine loads MPFever's native module (winhttp.dll in the game's folder) instead of its own;
+- ROSETTA_ADVERTISE_AVX=1: Rosetta 2 tells the game that AVX exists (macOS 15 or later). MPF_AVX=0 turns it off;
+- WINEMSYNC=1 for Whisky (faster synchronisation inside Wine; CrossOver sets its own);
+- WINEDEBUG=-all: no Wine debug output (set WINEDEBUG yourself to get it; it goes to ~/Library/Logs/MPFever-mac.log).
+
+
+IF SOMETHING GOES WRONG
+-----------------------
+- "no Wine bottle found" / "not installed in it": see WHAT YOU NEED, or give MPF_PREFIX and MPF_GAMEDIR.
+- The game does not open, or closes at once: start Transport Fever 3 once from the bottle's own Steam, without MPFever. If that
+  fails, the problem is the Wine setup (graphics backend, memory), not MPFever: try the backend options of CrossOver / Whisky.
+- The MPFever window shows "native module" warnings: the whole archive must be extracted (winhttp.dll next to MPFever.exe).
+- Sessions with the other players reload every two minutes: the game build, DLCs or mods differ (the lobby says which), or the
+  game does not run the MPFever native module: check that native.log, in MPFever's logs folder, says it found its places.
+- MPFever's own logs: <game>/MPFever/logs (inside the bottle: drive_c/Program Files (x86)/Steam/steamapps/common/
+  Transport Fever 3/MPFever/logs). The script's log: ~/Library/Logs/MPFever-mac.log.
