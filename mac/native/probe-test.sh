@@ -43,6 +43,11 @@ ALIVE=no; pgrep -x TransportFever3 >/dev/null 2>&1 && ALIVE=yes
     echo "== module log"; cat "$LOGF" 2>&1
     echo "== game process still running: $ALIVE"
     echo "== game output (first 40 lines)"; head -40 "$HOME/mpfever-$NAME-game.txt" 2>&1
+    echo "== processes named TransportFever3 (pid, parent, running time, cpu, memory)"
+    ps -axo pid,ppid,etime,%cpu,rss,command | grep -i "[T]ransportFever3\|[S]team.app" | cut -c1-200
+    PID="$(sed -n 's/^MPFever probe [0-9a-z]* loaded, pid \([0-9]*\).*/\1/p' "$LOGF" 2>/dev/null | head -n 1)"
+    echo "== pid of the process that loaded the module: ${PID:-none}"
+    [ -n "$PID" ] && { echo "   still alive: $(kill -0 "$PID" 2>/dev/null && echo yes || echo no)"; echo "   threads: $(ps -M "$PID" 2>/dev/null | wc -l)"; }
     echo "== crash reports of the last 15 minutes"; find "$HOME/Library/Logs/DiagnosticReports" -name 'TransportFever3*' -mmin -15 2>/dev/null
 } > "$OUT" 2>&1
 pkill -x TransportFever3 2>/dev/null
