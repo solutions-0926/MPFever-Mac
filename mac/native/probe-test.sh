@@ -28,7 +28,12 @@ if [ "$NAME" != probe ]; then
     echo
     echo "The game is starting. When its main menu is there: load any savegame (or start a new game), let it run about 10 seconds,"
     echo "then come back to this window and press Enter."
+    echo "(Below, the module's counters are shown live. 'apply=0 ...' means no call yet. If numbers go up, the hook sees the game.)"
+    echo
+    tail -n 0 -f "$LOGF" &
+    TAILPID=$!
     read -r _ < /dev/tty
+    kill "$TAILPID" 2>/dev/null
 else
     sleep 3
 fi
