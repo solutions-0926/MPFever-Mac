@@ -50,9 +50,14 @@ if [ -z "$TAR" ]; then
 fi
 mkdir -p "$WORK/wine-src"
 tar -xf "$TAR" -C "$WORK/wine-src"
-# the Wine of such a build: <something>.app/Contents/Resources/wine (bin, lib, share)
+# the Wine of such a build: <something>.app/Contents/Resources/wine (bin, lib, share). Recent Wine has one `wine` for 32 and 64
+# bit, older has `wine64`: the app's start script wants wine64, so a link is made when it is missing.
 WINEDIR="$(find "$WORK/wine-src" -type d -path '*/Contents/Resources/wine' | head -n 1)"
-[ -n "$WINEDIR" ] && [ -x "$WINEDIR/bin/wine64" ] || { echo "no Contents/Resources/wine/bin/wine64 in $TAR" >&2; exit 1; }
+if [ -z "$WINEDIR" ] || { [ ! -x "$WINEDIR/bin/wine64" ] && [ ! -x "$WINEDIR/bin/wine" ]; }; then
+    echo "no Contents/Resources/wine/bin/wine64 (or wine) in $TAR; what it holds:" >&2
+    (cd "$WORK/wine-src" && find . -maxdepth 5 | head -n 40) >&2
+    exit 1
+fi
 
 # --- the app
 STAGE="$WORK/stage"
@@ -60,6 +65,7 @@ APP="$STAGE/MPFever.app"
 RES="$APP/Contents/Resources"
 mkdir -p "$APP/Contents/MacOS" "$RES"
 cp -R "$WINEDIR" "$RES/wine"
+[ -e "$RES/wine/bin/wine64" ] || ln -s wine "$RES/wine/bin/wine64"
 cp -R "$MPF" "$RES/MPFever"
 rm -rf "$RES/MPFever/mac"
 cp "$HERE/mpfever-mac.sh" "$RES/mpfever-mac.sh"
