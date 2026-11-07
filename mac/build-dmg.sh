@@ -18,6 +18,9 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 SRC="${1:-}"
 OUT="${2:-$PWD/release}"
 [ -n "$SRC" ] || { sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+# absolute paths: the script changes folder while it works
+case "$SRC" in /*) ;; *) SRC="$PWD/$SRC" ;; esac
+case "$OUT" in /*) ;; *) OUT="$PWD/$OUT" ;; esac
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/mpfever-dmg.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 

@@ -83,6 +83,14 @@ def test_dmg(t):
     out = t / "dmgout"
     p = subprocess.run(["bash", str(ROOT / "mac" / "build-dmg.sh"), str(src), str(out)], capture_output=True, timeout=120,
                        env={"PATH": os.environ["PATH"], "HOME": str(t / "hb"), "MPF_WINE_TARBALL": str(tar), "MPF_SKIP_DMG": "1"})
+    # (relative paths, as the workflow gives them: a zip, from the folder it is in)
+    zipf = t / "rel" / "MPFever-9.9.9.zip"
+    zipf.parent.mkdir(parents=True, exist_ok=True)
+    shutil.make_archive(str(zipf.with_suffix("")), "zip", str(t / "arch-dmg"), "MPFever")
+    pz = subprocess.run(["bash", str(ROOT / "mac" / "build-dmg.sh"), "MPFever-9.9.9.zip", "outrel"], capture_output=True, timeout=120, cwd=str(zipf.parent),
+                        env={"PATH": os.environ["PATH"], "HOME": str(t / "hb"), "MPF_WINE_TARBALL": str(tar), "MPF_SKIP_DMG": "1"})
+    check(pz.returncode == 0 and "9.9.9" in (zipf.parent / "outrel" / "dmg-contents" / "MPFever.app" / "Contents" / "Info.plist").read_text(),
+          "build-dmg.sh with a relative zip and output path: " + (pz.stdout + pz.stderr).decode()[-150:].replace("\n", " | "))
     check(p.returncode == 0, "build-dmg.sh assembles the app: " + (p.stdout + p.stderr).decode()[-200:].replace("\n", " | "))
     app = out / "dmg-contents" / "MPFever.app" / "Contents"
     check((app / "Resources" / "wine" / "bin" / "wine64").is_file(), "Wine is inside the app")
