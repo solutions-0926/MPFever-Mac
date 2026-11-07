@@ -3,9 +3,11 @@
 # start). It re-exports everything of the real library, which proxy-install.sh keeps next to it as libalut.0.real.dylib.
 # Needs the game's own libalut.0.dylib (only to read its symbol list; it is not copied into the result).
 #
-#   bash build-proxy.sh <path to the game's libalut.0.dylib>
+#   bash build-proxy.sh <path of the libalut.0.dylib of the game> [probe3|probe4]   (default probe3 -> libalut.0.proxy.dylib)
 set -eu
 cd "$(dirname "$0")"
+SRC="${2:-probe3}"
+if [ "$SRC" = probe3 ]; then OUT=libalut.0.proxy.dylib; else OUT="libalut.0.$SRC.dylib"; fi
 ORIG="${1:?give the path of the libalut.0.dylib of the game}"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 python3 -I - "$ORIG" "$T/libalut.0.real.dylib" <<'PY'
@@ -16,7 +18,7 @@ for c in b.commands:
         c.name = "@loader_path/libalut.0.real.dylib"
 fat.write(sys.argv[2])
 PY
-clang --target=arm64-apple-macos13 -O2 -fno-stack-protector -ffreestanding -fno-builtin -nostdlib -c probe3.c -o "$T/probe3.o"
+clang --target=arm64-apple-macos13 -O2 -fno-stack-protector -ffreestanding -fno-builtin -nostdlib -c "$SRC.c" -o "$T/$SRC.o"
 ld.lld -flavor darwin -arch arm64 -platform_version macos 13.0 13.0 -dylib -install_name @rpath/libalut.0.dylib \
-    -undefined dynamic_lookup -reexport_library "$T/libalut.0.real.dylib" -o libalut.0.proxy.dylib "$T/probe3.o"
-file libalut.0.proxy.dylib
+    -undefined dynamic_lookup -reexport_library "$T/libalut.0.real.dylib" -o "$OUT" "$T/$SRC.o"
+file "$OUT"

@@ -11,7 +11,7 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 CMD="${1:-status}"
 G="${2:-$HOME/Library/Application Support/Steam/steamapps/common/Transport Fever 3}"
-PROXY="$HERE/libalut.0.proxy.dylib"
+PROXY="$HERE/${MPF_PROXY:-libalut.0.proxy.dylib}"
 die() { echo "proxy-install: $*" >&2; exit 1; }
 [ -x "$G/TransportFever3" ] || die "TransportFever3 not found in: $G"
 ORIG="$G/libalut.0.dylib"; REAL="$G/libalut.0.real.dylib"; KEEP="$G/libalut.0.dylib.mpfever-orig"
