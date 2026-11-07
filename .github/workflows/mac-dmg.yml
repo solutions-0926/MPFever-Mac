@@ -1,6 +1,7 @@
 # Builds MPFever-<version>-mac.dmg (MPFever.app with its own Wine inside) on GitHub's macOS runner, from the Windows archive
 # MPFever-<version>.zip: the one in input/ when there is one, else the one of the release named by the tag. It runs on a push to
-# this branch's input/ folder and by hand. It publishes nothing: the .dmg is attached to the run.
+# this branch's input/ folder and by hand. The .dmg is attached to the run and published as a pre-release of this repository
+# (tag mac-<version>), so it can be downloaded without signing in.
 name: Mac dmg
 
 on:
@@ -14,6 +15,9 @@ on:
       - "input/*.zip"
       - "mac/**"
       - ".github/workflows/mac-dmg.yml"
+
+permissions:
+  contents: write
 
 jobs:
   dmg:
@@ -42,3 +46,13 @@ jobs:
           name: MPFever-mac-dmg
           path: release/*.dmg
           retention-days: 14
+      - name: Pre-release with the dmg
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DMG="$(ls release/*.dmg | head -n 1)"
+          VER="$(basename "$DMG" -mac.dmg | sed 's/^MPFever-//')"
+          gh release delete "mac-$VER" --repo "${{ github.repository }}" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "mac-$VER" "$DMG" --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+            --prerelease --title "MPFever $VER for Mac (untested pre-release)" \
+            --notes "MPFever.app with its own Wine inside. Not signed by Apple: right-click > Open the first time. See docs/INSTALL-MAC.txt."
