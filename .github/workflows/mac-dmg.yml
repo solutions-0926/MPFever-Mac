@@ -34,6 +34,8 @@ jobs:
           rm -f in/*-server.zip in/*ServerList*.zip
           ls in
       - name: Build the dmg
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: bash mac/build-dmg.sh in/MPFever-*.zip release
       - uses: actions/upload-artifact@v4
         with:

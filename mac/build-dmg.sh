@@ -9,6 +9,7 @@
 #                      of https://github.com/Gcenx/macOS_Wine_builds are)
 #   MPF_WINE_REPO      the GitHub repository whose latest release holds that Wine (default: Gcenx/macOS_Wine_builds)
 #   MPF_WINE_PATTERN   the name of its asset, as an extended regular expression (default: wine-staging-.*-osx64\.tar\.xz)
+#   GH_TOKEN           a GitHub token, to look up the Wine release without the anonymous rate limit (the workflow gives one)
 #   MPF_SKIP_DMG=1     stop after the folder that goes into the .dmg (no hdiutil: for tests on another system)
 #
 # The Wine inside is LGPL software (https://www.winehq.org); its license text stays in the app (Resources/wine/LICENSE*).
@@ -42,7 +43,9 @@ if [ -z "$TAR" ]; then
     REPO="${MPF_WINE_REPO:-Gcenx/macOS_Wine_builds}"
     PAT="${MPF_WINE_PATTERN:-wine-staging-.*-osx64\.tar\.xz}"
     echo "Looking for the latest Wine in $REPO ..."
-    URL="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep -o '"browser_download_url": *"[^"]*"' | sed 's/.*"\(https[^"]*\)"/\1/' | grep -E "/$PAT\$" | head -n 1)"
+    # (with GH_TOKEN, GitHub's rate limit of anonymous requests does not apply: it answers 403 to the runners' shared addresses)
+    AUTH=""; [ -n "${GH_TOKEN:-}" ] && AUTH="Authorization: Bearer $GH_TOKEN"
+    URL="$(curl -fsSL ${AUTH:+-H "$AUTH"} "https://api.github.com/repos/$REPO/releases/latest" | grep -o '"browser_download_url": *"[^"]*"' | sed 's/.*"\(https[^"]*\)"/\1/' | grep -E "/$PAT\$" | head -n 1)"
     [ -n "$URL" ] || { echo "no asset matching $PAT in the latest release of $REPO" >&2; exit 1; }
     echo "Downloading $URL"
     TAR="$WORK/$(basename "$URL")"
