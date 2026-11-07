@@ -9,8 +9,12 @@
 #
 #   mpfever-mac.sh install   find the game's bottle, copy MPFever into the game's folder, remember the choice
 #   mpfever-mac.sh play      start MPFever (it starts Transport Fever 3 itself); runs install first when needed
+#   mpfever-mac.sh setup     (MPFever.app from the .dmg, which carries its own Wine) make its bottle and install Steam in it
 #   mpfever-mac.sh doctor    say what was found and what is missing, change nothing
 #   mpfever-mac.sh app [dir] make MPFever.app (a double-clickable start) in dir (default: ~/Applications)
+#
+# Inside MPFever.app (from the .dmg) a Wine is part of the app (Resources/wine): nothing else to install. The script then uses the
+# app's own bottle (~/Library/Application Support/MPFever/Prefix) and no other.
 #
 # Settings (environment variables, all optional):
 #   MPF_PREFIX    the bottle / Wine prefix to use (the folder with drive_c in it)
@@ -18,6 +22,7 @@
 #   MPF_GAMEDIR   the game's folder (the one with TransportFever3.exe), as a Mac path
 #   MPF_SRC       the MPFever folder to install (default: the folder of this script's folder)
 #   MPF_AVX=0     do not tell Rosetta 2 to offer AVX to the game (on by default; needs macOS 15 or later)
+#   MPF_STEAM_ARGS  arguments for the Steam of the app's own bottle (default: -no-cef-sandbox -cef-disable-gpu)
 #   MPF_DRY_RUN=1 print what would run, run nothing
 #
 # Written for the bash 3.2 that macOS has: only what that old bash can do.
@@ -29,6 +34,8 @@ case "$SELF" in /*) ;; *) SELF="$PWD/$SELF" ;; esac
 SELF_DIR="$(cd "$(dirname "$SELF")" && pwd)"
 
 CONF_DIR="${HOME}/Library/Application Support/MPFever"
+BUNDLED_WINE=""; BUNDLED_PREFIX="${CONF_DIR}/Prefix"
+[ -x "$SELF_DIR/wine/bin/wine64" ] && BUNDLED_WINE="$SELF_DIR/wine/bin/wine64"
 CONF="${CONF_DIR}/mac.conf"
 LOG="${HOME}/Library/Logs/MPFever-mac.log"
 DRY="${MPF_DRY_RUN:-0}"
@@ -75,6 +82,10 @@ list_prefixes() {
         printf '%s\t%s\n' "$kind" "$MPF_PREFIX"
         return
     fi
+    if [ -n "$BUNDLED_WINE" ]; then
+        is_prefix "$BUNDLED_PREFIX" && printf 'bundled\t%s\n' "$BUNDLED_PREFIX"
+        return
+    fi
     for d in "$HOME/Library/Containers/com.isaacmarovitz.Whisky/Bottles"/*; do
         is_prefix "$d" && printf 'whisky\t%s\n' "$d"
     done
@@ -106,6 +117,7 @@ game_in_prefix() {
 find_wine() {
     local kind="$1" c
     if [ -n "${MPF_WINE:-}" ]; then echo "$MPF_WINE"; return; fi
+    if [ -n "$BUNDLED_WINE" ]; then echo "$BUNDLED_WINE"; return; fi
     case "$kind" in
         whisky)
             for c in "$HOME/Library/Application Support/com.isaacmarovitz.Whisky/Libraries/Wine/bin/wine64"; do
@@ -152,7 +164,13 @@ resolve() {
         IFS="$IFS_SAVE"
     fi
     if [ -z "$PREFIX" ]; then
-        if [ -z "$first" ]; then
+        if [ -n "$BUNDLED_WINE" ] && [ -z "${MPF_PREFIX:-}" ]; then
+            if is_prefix "$BUNDLED_PREFIX"; then
+                warn "Transport Fever 3 is not installed in MPFever's bottle yet: start Steam in it (play), sign in and install the game, then run this again."
+            else
+                warn "MPFever's bottle is not made yet: run 'setup' (MPFever.app does it at its first start)."
+            fi
+        elif [ -z "$first" ]; then
             warn "no Wine bottle found (looked for Whisky, CrossOver and Wine prefixes)."
             warn "Install CrossOver (https://www.codeweavers.com/crossover) or Whisky, make a bottle, install Steam in it"
             warn "(the Windows Steam) and Transport Fever 3 through that Steam, then run this again."
@@ -218,10 +236,50 @@ wine_run() {
     fi
 }
 
+# the app's own bottle: Windows 10, then Steam in it (the player signs in and installs Transport Fever 3 there)
+do_setup() {
+    [ -n "$BUNDLED_WINE" ] || die "setup is for MPFever.app, which has its own Wine; with CrossOver or Whisky, make the bottle there."
+    KIND=bundled; PREFIX="$BUNDLED_PREFIX"; WINE="$BUNDLED_WINE"
+    if [ "$(uname -m)" = arm64 ] && [ "$DRY" != 1 ] && ! /usr/bin/pgrep oahd >/dev/null 2>&1; then
+        say "Rosetta 2 is needed to run Wine on this Mac: installing it (Apple's own installer)."
+        softwareupdate --install-rosetta --agree-to-license || warn "Rosetta 2 was not installed: run  softwareupdate --install-rosetta --agree-to-license"
+    fi
+    export WINEDEBUG="${WINEDEBUG:--all}"
+    mkdir -p "$(dirname "$LOG")" "$BUNDLED_PREFIX" 2>/dev/null
+    say "Making the bottle in $PREFIX (a minute)..."
+    wine_run wineboot -u >>"$LOG" 2>&1 || warn "wineboot reported a problem: see $LOG"
+    wine_run reg add 'HKCU\Software\Wine' /v Version /d win10 /f >>"$LOG" 2>&1
+    local steam="$PREFIX/drive_c/Program Files (x86)/Steam/steam.exe"
+    if [ -f "$steam" ]; then say "Steam is already in the bottle."; return 0; fi
+    local inst="$CONF_DIR/SteamSetup.exe"
+    if [ "$DRY" = 1 ]; then say "(dry run) curl -L -o \"$inst\" https://cdn.cloudflare.steamstatic.com/client/installer/SteamSetup.exe"
+    else
+        say "Downloading the Steam installer..."
+        curl -fL --retry 3 -o "$inst" "https://cdn.cloudflare.steamstatic.com/client/installer/SteamSetup.exe" \
+            || die "the Steam installer could not be downloaded: get SteamSetup.exe from store.steampowered.com and run: MPF_WINE=... (see INSTALL-MAC.txt)"
+    fi
+    say "Starting the Steam installer: follow it, then sign in to Steam and install Transport Fever 3 (Windows version)."
+    wine_run "$inst" >>"$LOG" 2>&1
+    say "When the game is installed, start MPFever again."
+}
+
 steam_running() { pgrep -f -i 'steam\.exe' >/dev/null 2>&1; }
 
 do_play() {
-    resolve || return 1
+    if [ -n "$BUNDLED_WINE" ] && [ -z "${MPF_PREFIX:-}" ] && ! is_prefix "$BUNDLED_PREFIX"; then do_setup || return 1; fi
+    if ! resolve && [ -n "$BUNDLED_WINE" ] && [ -z "${MPF_PREFIX:-}" ]; then
+        # the bottle exists, the game is not in it yet: Steam is what the player needs
+        KIND=bundled; PREFIX="$BUNDLED_PREFIX"; WINE="$BUNDLED_WINE"
+        export WINEDEBUG="${WINEDEBUG:--all}"
+        local st="$PREFIX/drive_c/Program Files (x86)/Steam/steam.exe"
+        if [ -f "$st" ] && ! steam_running; then
+            say "Starting Steam: install Transport Fever 3 there, then start MPFever again."
+            # shellcheck disable=SC2086
+            wine_run "C:\\Program Files (x86)\\Steam\\steam.exe" ${MPF_STEAM_ARGS:--no-cef-sandbox -cef-disable-gpu} >>"$LOG" 2>&1 &
+        fi
+        return 1
+    fi
+    [ -n "${KIND:-}" ] || return 1
     local mpf="$GAMEDIR/MPFever"
     if [ ! -f "$mpf/MPFever.exe" ] || [ ! -f "$mpf/winhttp.dll" ]; then
         say "MPFever is not installed in the game's folder yet: installing."
@@ -249,7 +307,10 @@ do_play() {
         local steam="$PREFIX/drive_c/Program Files (x86)/Steam/steam.exe"
         if [ -f "$steam" ]; then
             say "Starting Steam in the bottle (the game needs it)..."
-            ( wine_run "C:\\Program Files (x86)\\Steam\\steam.exe" -silent >>"$LOG" 2>&1 & )
+            local sargs="-silent"
+            [ "$KIND" = bundled ] && sargs="-silent ${MPF_STEAM_ARGS:--no-cef-sandbox -cef-disable-gpu}"
+            # shellcheck disable=SC2086
+            ( wine_run "C:\\Program Files (x86)\\Steam\\steam.exe" $sargs >>"$LOG" 2>&1 & )
             local i=0
             while [ $i -lt 40 ] && ! steam_running; do sleep 1; i=$((i + 1)); done
             sleep 8   # (its sign-in)
@@ -329,9 +390,10 @@ LAUNCH
 cmd="${1:-play}"
 case "$cmd" in
     install) do_install ;;
+    setup)   do_setup ;;
     play)    do_play ;;
     doctor)  do_doctor ;;
     app)     shift; do_app "${1:-}" ;;
-    -h|--help|help) sed -n '2,29p' "$SELF" | sed 's/^# \{0,1\}//' ;;
-    *) die "unknown command '$cmd' (install, play, doctor, app)" ;;
+    -h|--help|help) sed -n '2,/^$/p' "$SELF" | sed 's/^# \{0,1\}//' ;;
+    *) die "unknown command '$cmd' (install, setup, play, doctor, app)" ;;
 esac

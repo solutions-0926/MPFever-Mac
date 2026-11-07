@@ -149,7 +149,7 @@ The mods tested so far are listed in [MODS](docs/MODS.md).
 ## Known limitations
 
 - **One company per player:** a merger into the savegame's company leaves the merged company's loans behind (they are the game's own loans).
-- **Steam and Windows only.** On a **Mac** it runs through Wine (CrossOver or Whisky) with the Windows build of the game: see [INSTALL-MAC](docs/INSTALL-MAC.txt) (new, not yet tested on a real Mac). Linux and Steam Deck players report that it runs through Proton (see INSTALL.txt; untested by us). The Mac's own build of the game is not supported: it is a different program that MPFever cannot patch.
+- **Steam and Windows only.** On a **Mac** it runs through Wine (a .dmg with Wine inside, or CrossOver or Whisky) with the Windows build of the game: see [INSTALL-MAC](docs/INSTALL-MAC.txt) (new, not yet tested on a real Mac). Linux and Steam Deck players report that it runs through Proton (see INSTALL.txt; untested by us). The Mac's own build of the game is not supported: it is a different program that MPFever cannot patch.
 - **One company per player: the game's achievements** are counted for the savegame's company only (the game's own scripts see that company alone).
 - **Small drifts of vehicles and passengers** can happen. They are repaired by a reload if they last.
 - **Two players changing the same place within about two seconds**: the build made second is left out on every game when it no longer fits the place, and has to be made again (with one company per player, the chat tells its player).

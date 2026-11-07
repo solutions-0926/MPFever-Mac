@@ -62,10 +62,68 @@ def run(home, args, **env):
     return p.returncode, (p.stdout + p.stderr).decode("utf-8", "replace")
 
 
+def make_wine_tarball(base):
+    """A made-up Wine build of macOS (Wine Staging.app/Contents/Resources/wine/bin/wine64): a wine that records its calls and makes a bottle."""
+    root = base / "tarsrc" / "Wine Staging.app" / "Contents" / "Resources" / "wine"
+    w = root / "bin" / "wine64"
+    touch(w, '#!/bin/bash\n{ echo "args: $*"; echo "prefix: $WINEPREFIX"; echo "overrides: $WINEDLLOVERRIDES"; } >> "$MPF_TEST_CALLS"\n'
+             'if [ "$1" = wineboot ]; then mkdir -p "$WINEPREFIX/drive_c/windows"; echo x > "$WINEPREFIX/system.reg"; fi\n'
+             'if [ "${1##*.}" = exe ] && [ "$(basename "$1")" = SteamSetup.exe ]; then mkdir -p "$WINEPREFIX/drive_c/Program Files (x86)/Steam"; echo x > "$WINEPREFIX/drive_c/Program Files (x86)/Steam/steam.exe"; fi\n')
+    w.chmod(0o755)
+    touch(root / "lib" / "libwine.dylib")
+    tar = base / "wine.tar.gz"
+    subprocess.run(["tar", "-czf", str(tar), "-C", str(base / "tarsrc"), "Wine Staging.app"], check=True)
+    return tar
+
+
+def test_dmg(t):
+    """build-dmg.sh assembles MPFever.app with its own Wine; the app makes its bottle at the first start, then finds the game."""
+    src = make_src(t / "arch-dmg")
+    tar = make_wine_tarball(t / "dmgwork")
+    out = t / "dmgout"
+    p = subprocess.run(["bash", str(ROOT / "mac" / "build-dmg.sh"), str(src), str(out)], capture_output=True, timeout=120,
+                       env={"PATH": os.environ["PATH"], "HOME": str(t / "hb"), "MPF_WINE_TARBALL": str(tar), "MPF_SKIP_DMG": "1"})
+    check(p.returncode == 0, "build-dmg.sh assembles the app: " + (p.stdout + p.stderr).decode()[-200:].replace("\n", " | "))
+    app = out / "dmg-contents" / "MPFever.app" / "Contents"
+    check((app / "Resources" / "wine" / "bin" / "wine64").is_file(), "Wine is inside the app")
+    check((app / "Resources" / "MPFever" / "MPFever.exe").is_file() and not (app / "Resources" / "MPFever" / "mac").exists(), "the Windows MPFever is inside the app")
+    check(os.access(app / "MacOS" / "MPFever", os.X_OK) and (out / "dmg-contents" / "Applications").is_symlink(), "the app starts, Applications link for the drag to install")
+    check("CFBundleShortVersionString" in (app / "Info.plist").read_text(), "Info.plist written")
+
+    # first start: no bottle -> setup makes it, a curl that fetches Steam's installer, wine runs it
+    home = t / "hb"
+    home.mkdir(parents=True, exist_ok=True)
+    fakebin = t / "fakebin"
+    touch(fakebin / "curl", '#!/bin/bash\nout=""; while [ $# -gt 0 ]; do [ "$1" = -o ] && out="$2"; shift; done; echo exe > "$out"\n')
+    (fakebin / "curl").chmod(0o755)
+    calls = t / "dmg.calls"
+    env = {"PATH": str(fakebin) + os.pathsep + os.environ["PATH"], "HOME": str(home), "MPF_TEST_CALLS": str(calls), "WINEDEBUG": "-all"}
+    p = subprocess.run([str(app / "MacOS" / "MPFever")], env=env, capture_output=True, timeout=60)
+    txt = calls.read_text() if calls.exists() else ""
+    prefix = home / "Library/Application Support/MPFever/Prefix"
+    check("args: wineboot -u" in txt and "prefix: " + str(prefix) in txt, "first start: wineboot makes the app's own bottle")
+    check("SteamSetup.exe" in txt, "first start: the Steam installer is run in it")
+    check(p.returncode != 0 and b"not installed in MPFever's bottle" in (p.stdout + p.stderr), "without the game it says to install it in Steam")
+    # the player installed the game: next start runs MPFever.exe from the game's folder with winhttp native first
+    game = prefix / "drive_c/Program Files (x86)/Steam/steamapps/common/Transport Fever 3"
+    touch(game / "TransportFever3.exe")
+    calls.unlink()
+    p = subprocess.run([str(app / "MacOS" / "MPFever")], env=env, capture_output=True, timeout=60)
+    txt = calls.read_text() if calls.exists() else ""
+    check(p.returncode == 0 and "args: MPFever.exe" in txt and "overrides: winhttp=n,b" in txt, "with the game: MPFever.exe starts through the app's Wine")
+    check((game / "MPFever" / "MPFever.exe").is_file() and (game / "MPFever" / "winhttp.dll").is_file(), "the app's MPFever is installed into the game's folder")
+    # other bottles are ignored by the app (it has its own Wine and bottle)
+    make_bottle(home / "Library/Containers/com.isaacmarovitz.Whisky/Bottles/X")
+    p = subprocess.run(["bash", str(app / "Resources" / "mpfever-mac.sh"), "doctor"], env=env, capture_output=True, timeout=60)
+    check(("Bottle:    " + str(prefix)).encode() in p.stdout, "the app keeps to its own bottle, not CrossOver's or Whisky's")
+
+
 def main():
     if shutil.which("bash") is None:
         print("test skipped: no bash")
         return 0
+    with tempfile.TemporaryDirectory() as t2:
+        test_dmg(pathlib.Path(t2))
     with tempfile.TemporaryDirectory() as t:
         t = pathlib.Path(t)
 

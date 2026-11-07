@@ -1,5 +1,22 @@
-MPFever on a Mac (through Wine)
+MPFever on a Mac
 ========================================================
+
+TWO WAYS, both with the Windows game running in Wine (MPFever patches the Windows TransportFever3.exe):
+
+A. THE .DMG (nothing else to install: Wine is inside the app)
+   1. Open MPFever-<version>-mac.dmg and drag MPFever.app into Applications.
+   2. The first time, right-click MPFever.app > Open (it is not signed by Apple), then confirm. If macOS says the app is damaged:
+          xattr -dr com.apple.quarantine /Applications/MPFever.app
+   3. The first start installs Rosetta 2 when needed (Apple Silicon), makes its own bottle (Windows 10) and starts the Steam
+      installer in it: sign in to Steam there and install Transport Fever 3 (the Windows version, one more download; your
+      account already owns it). Start MPFever.app again: it starts the game with the multiplayer module.
+   Everything of the app lives in ~/Library/Application Support/MPFever (the bottle, with the game in it); its log is
+   ~/Library/Logs/MPFever-mac.log. The app is built by the "Mac dmg" workflow (.github/workflows/mac-dmg.yml) or by
+   bash mac/build-dmg.sh <MPFever-x.y.z.zip> on a Mac.
+
+B. YOUR OWN WINE (CrossOver or Whisky), with the script: the rest of this file.
+
+---------------------------------------------------------------------------------------------------------------------------
 
 MPFever works with the WINDOWS build of Transport Fever 3: it patches TransportFever3.exe. On a Mac you run that Windows game,
 and the Windows MPFever.exe next to it, in one Wine "bottle". This is the same thing the Linux / Proton players do (see
@@ -10,8 +27,9 @@ it may calculate with slightly different numbers than the Windows build, so a Ma
 stay in the same world. With the Windows build in Wine, you play with everybody else, Windows players included.
 Everyone in a game still needs the same game build (40425, 40423 or 40420), the same DLCs and the same mods.
 
-Status: this setup is NEW and has been tested only with the script's own checks (tests/test_macwine.py), not yet on a real
-Mac with the game. Please report how it went (Discord, or a GitHub issue with ~/Library/Logs/MPFever-mac.log and MPFever's logs).
+Status: both ways are NEW and have been tested only with the scripts' own checks (tests/test_macwine.py), not yet on a real
+Mac with the game; the Wine inside the .dmg is a build of https://github.com/Gcenx/macOS_Wine_builds (LGPL), downloaded when the
+.dmg is built, and its graphics backend (MoltenVK/DXVK/D3DMetal) may need tuning for the game. Please report how it went (Discord, or a GitHub issue with ~/Library/Logs/MPFever-mac.log and MPFever's logs).
 
 
 WHAT YOU NEED

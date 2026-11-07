@@ -1,0 +1,32 @@
+# Builds MPFever-<version>-mac.dmg (MPFever.app with its own Wine inside) on GitHub's macOS runner, from the Windows archive of a
+# release (MPFever-<version>.zip), and attaches it to the run. Started by hand. It publishes nothing.
+name: Mac dmg
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "release tag whose MPFever-<version>.zip is used (for example v0.7.5)"
+        required: true
+
+jobs:
+  dmg:
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: The Windows archive of the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p in
+          gh release download "${{ inputs.tag }}" --repo "${{ github.repository }}" --pattern 'MPFever-*.zip' --dir in
+          rm -f in/*-server.zip in/*ServerList*.zip
+          ls in
+      - name: Build the dmg
+        run: bash mac/build-dmg.sh in/MPFever-*.zip release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MPFever-mac-dmg
+          path: release/*.dmg
+          retention-days: 14
