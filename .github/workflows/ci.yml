@@ -54,7 +54,7 @@ jobs:
   mac-scripts:
     strategy:
       matrix:
-        os: [macos-14, ubuntu-latest]
+        os: [macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
