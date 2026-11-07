@@ -22,6 +22,8 @@ codesign --force --sign - "$DYL" 2>&1 | tail -1
 pkill -x TransportFever3 2>/dev/null
 pgrep -x steam_osx >/dev/null 2>&1 || { echo "Starting Steam..."; open -g -a Steam; sleep 15; }
 echo "Starting the game with the module..."
+# the game's Steam number: without it the game, started outside Steam, cannot sign in ("User Profile Creation Failed")
+export SteamAppId=3493540 SteamGameId=3493540
 ( cd "$G" && DYLD_INSERT_LIBRARIES="$DYL" ./TransportFever3 > "$HOME/mpfever-$NAME-game.txt" 2>&1 ) &
 for i in $(seq 1 40); do [ -s "$LOGF" ] && break; sleep 1; done
 if [ "$NAME" != probe ]; then
