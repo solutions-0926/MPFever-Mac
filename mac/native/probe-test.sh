@@ -4,6 +4,7 @@
 #
 #   bash probe-test.sh probe  [game folder]    step 1: is the module loaded?
 #   bash probe-test.sh probe2 [game folder]    step 2: patch the Lua seed, hook the command function (load a savegame when asked)
+#   bash probe-test.sh probe3 [game folder]    step 3: six counting hooks, a line in the log every half second (load a savegame, build something)
 #
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
