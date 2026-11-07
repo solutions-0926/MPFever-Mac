@@ -27,7 +27,7 @@ if [ "$NAME" != probe ]; then
     echo
     echo "The game is starting. When its main menu is there: load any savegame (or start a new game), let it run about 10 seconds,"
     echo "then come back to this window and press Enter."
-    read -r _
+    read -r _ < /dev/tty
 else
     sleep 3
 fi
